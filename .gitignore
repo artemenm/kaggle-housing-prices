@@ -1,7 +1,8 @@
-.dvc/
-.mypy_cache/
-.vscode/
-notebooks/
-src/
+/.dvc
+/.mypy_cache
+/.vscode
+/notebooks
+/src
 cheatsheet.md
 submission.csv
+/data
