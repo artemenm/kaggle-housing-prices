@@ -1,0 +1,11 @@
+prepare:
+  random_state: 1
+  train_frac: 0.8
+
+train:
+  random_state: 1
+  tune: false
+  ensemble: false
+
+predict:
+  model_name: 'baseline_model'

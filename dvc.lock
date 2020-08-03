@@ -1,0 +1,26 @@
+prepare:
+  cmd: python src/prepare.py
+  deps:
+  - path: src/prepare.py
+    md5: f926c188d68370be94eb9fe24abac41e
+  params:
+    params.yaml:
+      prepare.random_state: 1
+      prepare.train_frac: 0.8
+train:
+  cmd: python src/train.py
+  deps:
+  - path: src/train.py
+    md5: 7424858a71791558ee07322776e305ce
+  params:
+    params.yaml:
+      train.random_state: 1
+      train.tune: false
+predict:
+  cmd: python src/predict.py
+  deps:
+  - path: src/train.py
+    md5: 7424858a71791558ee07322776e305ce
+  params:
+    params.yaml:
+      predict.model_name: baseline_model

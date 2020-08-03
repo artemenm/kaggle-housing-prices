@@ -1,8 +1,9 @@
 /.dvc
 /.mypy_cache
 /.vscode
+/catboost_info
+/data
 /notebooks
-/src
+/tmp
 cheatsheet.md
 submission.csv
-/data
