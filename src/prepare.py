@@ -9,6 +9,7 @@ params = yaml.safe_load(open('params.yaml'))['prepare']
 random_state: int = params['random_state']
 train_frac: float = params['train_frac']
 
+
 def fix_features(df):
     # fix the categorical feature that is wrongly considered numerical
     df.MSSubClass = df.MSSubClass.astype('object')

@@ -3,21 +3,26 @@ import json
 import pickle
 from os.path import join
 from pathlib import Path
+import numpy as np
 import pandas as pd
 from catboost import CatBoostRegressor
+
+from tqdm import tqdm
 
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 from sklearn.feature_selection import SelectPercentile, mutual_info_regression
+from sklearn.model_selection import cross_val_score
 from sklearn.metrics import mean_absolute_error
+
+import optuna
 
 
 params = yaml.safe_load(open('params.yaml'))['train']
 random_state: int = params['random_state']
-tune: bool = params['tune']
-ensemble: bool = params['ensemble']
+mode: str = params['mode']  # ('', 'ensemble', 'tune')
 
 
 def remove_outliers(X, y):
@@ -67,16 +72,15 @@ def get_feature_types():
     return numerical_features, ordinal_features, categorical_features
 
 
-def regressor_pipeline(X,
-                       y,
-                       percentile=80,
-                       iterations=1000):
+def regressor_pipeline(percentile,
+                       iterations,
+                       random_state):
     feature_selector = SelectPercentile(mutual_info_regression,
                                         percentile=percentile)
 
     numerical_transformer = Pipeline(
         steps=[
-            ('imputer', SimpleImputer(strategy='most_frequent')),
+            ('imputer', SimpleImputer(strategy='mean')),
             ('scaler', StandardScaler()),
             ('feature_selection', feature_selector)
         ]
@@ -98,7 +102,7 @@ def regressor_pipeline(X,
 
     regressor = CatBoostRegressor(cat_features=list(range(len(categorical_features))),
                                   iterations=iterations,
-                                  #learning_rate=0.15,
+                                  loss_function='MAE',
                                   random_state=random_state,
                                   verbose=0)
 
@@ -112,31 +116,80 @@ def regressor_pipeline(X,
     return pipeline
 
 
+def objective(trial):
+    params = {
+        'percentile': trial.suggest_int('percentile', 10, 100),
+        'iterations': trial.suggest_int('iterations', 500, 2000),
+        'random_state': random_state
+    }
+
+    model = regressor_pipeline(**params)
+    model.fit(X, y)
+
+    # mae = mean_absolute_error(y_val, model.predict(X_val))
+    mae = np.mean(cross_val_score(model, X, y, cv=3, scoring='neg_mean_absolute_error', verbose=1))
+
+    print(mae)
+    return mae
+
+
 if __name__ == '__main__':
     project_dir = Path(__file__).resolve().parents[1]
     prepared_data_dir = join(project_dir, 'data', 'prepared')
-    path_to_model_file = join(project_dir, 'models', 'baseline_model.pkl')
+    ensembled_models_dir = join(project_dir, 'models', 'ensembled')
+    path_to_model_file = join(project_dir, 'models', 'optuna_model.pkl')
     path_to_scores_file = join(project_dir, 'scores.json')
 
     df_train = pd.read_csv(join(prepared_data_dir, 'train.csv'), index_col=0)
-
     X, y = df_train.drop(['SalePrice'], axis=1), df_train.SalePrice
+
+    df_val = pd.read_csv(join(prepared_data_dir, 'val.csv'), index_col=0)
+    X_val, y_val = df_val.drop(['SalePrice'], axis=1), df_val.SalePrice
 
     X, y = remove_outliers(X, y)
 
     numerical_features, ordinal_features, categorical_features = get_feature_types()
 
-    model = regressor_pipeline(X, y, percentile=86, iterations=750)
-    model.fit(X, y)
+    ##########################
+    # TRAIN, SAVE & VALIDATE #
+    ##########################
 
-    with open(path_to_model_file, 'wb') as f:
-        pickle.dump(model, f)
+    if mode == 'ensemble':
+        models = []
+        for i in tqdm(range(25)):
+            model = regressor_pipeline(percentile=100,
+                                       iterations=1600,
+                                       random_state=None)
 
-    df_val = pd.read_csv(join(prepared_data_dir, 'val.csv'), index_col=0)
-    X_val, y_val = df_val.drop(['SalePrice'], axis=1), df_val.SalePrice
-    mae = mean_absolute_error(y_val, model.predict(X_val))
+            model.fit(X, y)
+            models.append(model)
 
-    print(mae)
+            with open(join(ensembled_models_dir, f'model_{i}.pkl'), 'wb') as f:
+                pickle.dump(model, f)
+
+        predictions = np.array([model.predict(X_val) for model in models])
+        y_pred = np.sum(predictions, axis=0) / predictions.shape[0]
+        mae = mean_absolute_error(y_val, y_pred)
+    else:
+        if mode == 'tune':
+            study = optuna.create_study(direction='maximize')
+            study.optimize(objective,
+                           n_trials=100,
+                           n_jobs=-1)
+            model = regressor_pipeline(**study.best_params)
+        else:
+            model = regressor_pipeline(percentile=80,
+                                       iterations=1600,
+                                       random_state=random_state)
+
+        model.fit(X, y)
+
+        with open(path_to_model_file, 'wb') as f:
+            pickle.dump(model, f)
+
+        mae = mean_absolute_error(y_val, model.predict(X_val))
 
     with open(path_to_scores_file, 'w') as f:
-        json.dump({'mae': mae}, f)
+        json.dump({'val_mae': mae}, f)
+
+    print(mae)

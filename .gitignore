@@ -3,6 +3,8 @@
 /.vscode
 /catboost_info
 /data
+/models/ensembled
+/models/optuna_model.pkl
 /notebooks
 /tmp
 cheatsheet.md

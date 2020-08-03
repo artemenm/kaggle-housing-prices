@@ -12,10 +12,11 @@ stages:
     - src/train.py
     params:
     - train.random_state
-    - train.tune
+    - train.mode
   predict:
     cmd: python src/predict.py
     deps:
     - src/train.py
     params:
     - predict.model_name
+    - predict.mode

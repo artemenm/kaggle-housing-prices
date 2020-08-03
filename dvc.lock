@@ -2,7 +2,7 @@ prepare:
   cmd: python src/prepare.py
   deps:
   - path: src/prepare.py
-    md5: f926c188d68370be94eb9fe24abac41e
+    md5: 55a9b61797491d750704783e0ccac43e
   params:
     params.yaml:
       prepare.random_state: 1
@@ -11,16 +11,17 @@ train:
   cmd: python src/train.py
   deps:
   - path: src/train.py
-    md5: 7424858a71791558ee07322776e305ce
+    md5: aa34e83cb1404f65df7c637dcab08445
   params:
     params.yaml:
+      train.mode: ensemble
       train.random_state: 1
-      train.tune: false
 predict:
   cmd: python src/predict.py
   deps:
   - path: src/train.py
-    md5: 7424858a71791558ee07322776e305ce
+    md5: aa34e83cb1404f65df7c637dcab08445
   params:
     params.yaml:
+      predict.mode: ensemble
       predict.model_name: baseline_model

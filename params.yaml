@@ -4,8 +4,8 @@ prepare:
 
 train:
   random_state: 1
-  tune: false
-  ensemble: false
+  mode: 'ensemble'
 
 predict:
   model_name: 'baseline_model'
+  mode: 'ensemble'
