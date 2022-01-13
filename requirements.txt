@@ -48,7 +48,7 @@ packaging==20.4
 pandas==1.1.0
 pathspec==0.8.0
 pbr==5.4.5
-Pillow==7.2.0
+Pillow==9.0.0
 plotly==4.9.0
 ply==3.11
 pprintpp==0.4.0
