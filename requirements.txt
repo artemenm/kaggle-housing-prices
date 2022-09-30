@@ -30,7 +30,7 @@ grandalf==0.6
 graphviz==0.14.1
 idna==2.10
 isort==4.3.21
-joblib==0.16.0
+joblib==1.2.0
 jsonpath-ng==1.5.1
 kiwisolver==1.2.0
 lazy-object-proxy==1.4.3
